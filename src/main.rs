@@ -3,7 +3,7 @@ extern crate time;
 
 use rayon::prelude::*;
 use std::f64;
-
+use std::time::Instant;
 use std::error::Error;
 use std::io;
 use std::io::prelude::*;
@@ -55,7 +55,7 @@ fn prim(cities_list: Vec<City>) -> Vec<i32>{
                     sinlat: vec![-1.0; cities_list.len()],
                     coslat: vec![-1.0; cities_list.len()],
                     cost: vec![-1.0; cities_list.len()],
-    }; 
+    };
 
     //more initializations
     for i in 0..cities_list.len() {
@@ -75,12 +75,12 @@ fn prim(cities_list: Vec<City>) -> Vec<i32>{
     let mut f_sinlat = lat[0].sin();
     let mut f_coslat = lat[0].cos();
     //then we remove it from the list of not connected cities
-    q.indic.swap_remove(0); 
-    q.edge.swap_remove(0); 
-    q.lon.swap_remove(0); 
-    q.sinlat.swap_remove(0); 
-    q.coslat.swap_remove(0); 
-    q.cost.swap_remove(0); 
+    q.indic.swap_remove(0);
+    q.edge.swap_remove(0);
+    q.lon.swap_remove(0);
+    q.sinlat.swap_remove(0);
+    q.coslat.swap_remove(0);
+    q.cost.swap_remove(0);
 
     let mut total_cost = 0f64;
     //add cities to the tree until they are all in the tree
@@ -92,10 +92,10 @@ fn prim(cities_list: Vec<City>) -> Vec<i32>{
           .zip(q.lon.par_iter())
           .zip(q.sinlat.par_iter())
           .zip(q.coslat.par_iter())
-          .map( |(((((i,cost),edge),lon),sinlat),coslat)| 
+          .map( |(((((i,cost),edge),lon),sinlat),coslat)|
                 {
                     //compute the distance to the newly added city
-                    let new_cost = (f_sinlat*sinlat + (f_lon - lon).cos() * f_coslat * coslat).acos(); 
+                    let new_cost = (f_sinlat*sinlat + (f_lon - lon).cos() * f_coslat * coslat).acos();
                     //if needed we update this city
                     if new_cost < *cost {
                         //this is the minimal distance to the tree from this city
@@ -107,7 +107,7 @@ fn prim(cities_list: Vec<City>) -> Vec<i32>{
                 }
                 )
           //we find the closest city to the tree (its id and the cost of the new link)
-        .reduce_with(|a, b| 
+        .reduce_with(|a, b|
                      if b.1 < a.1 {
                          b
                      }
@@ -115,7 +115,7 @@ fn prim(cities_list: Vec<City>) -> Vec<i32>{
                          a
                      }
         );
-        
+
         let min_id = tuple.unwrap().0;
         //multiply by 6378 to get the real distance in km
         total_cost += 6378.0*tuple.unwrap().1;
@@ -130,18 +130,18 @@ fn prim(cities_list: Vec<City>) -> Vec<i32>{
         f_coslat = q.coslat[min_id];
 
         //we remove the new city from the list of free cities
-        q.indic.swap_remove(min_id); 
-        q.edge.swap_remove(min_id); 
-        q.lon.swap_remove(min_id); 
-        q.sinlat.swap_remove(min_id); 
-        q.coslat.swap_remove(min_id); 
-        q.cost.swap_remove(min_id); 
+        q.indic.swap_remove(min_id);
+        q.edge.swap_remove(min_id);
+        q.lon.swap_remove(min_id);
+        q.sinlat.swap_remove(min_id);
+        q.coslat.swap_remove(min_id);
+        q.cost.swap_remove(min_id);
     }
     println!("the graph is : {:.1}km long", total_cost);
     return edges
 }
-    
-    
+
+
 fn main() {
     //read some cities from stdin
     let cities: Vec<City> = read_some_cities().unwrap();
@@ -151,11 +151,10 @@ fn main() {
         write!(&mut buffer,"{} {} {}\n", c.pop,c.lon, c.lat).unwrap();
     }
 
-    let tic = time::get_time();
+    let now = Instant::now();
     //find the minimum spaning tree with prim's algorithm
     let edges = prim(cities);
-    let toc= time::get_time();
-    println!("time : {:?}",toc-tic);
+    println!("nanoseconds: {}", now.elapsed().as_nanos());
 
     //write the edges of the minimum spanning tree to file
     let mut buffer2 = File::create("resuGraph.dat").unwrap();
